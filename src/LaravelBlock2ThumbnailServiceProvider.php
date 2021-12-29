@@ -21,7 +21,6 @@ class LaravelBlock2ThumbnailServiceProvider extends ServiceProvider
 
         $this->publishes([
             __DIR__ . '/config/laravel_block2_thumbnail_config.php' => config_path('gmj/laravel_block2_thumbnail_config.php'),
-            __DIR__ . '/resources/assets' => public_path('gmj'),
             __DIR__ . '/database/seeders' => database_path('seeders'),
         ], 'GMJ\LaravelBlock2Thumbnail');
     }
