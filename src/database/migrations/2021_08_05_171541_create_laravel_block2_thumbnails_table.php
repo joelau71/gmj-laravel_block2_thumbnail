@@ -17,7 +17,6 @@ class CreateLaravelBlock2ThumbnailsTable extends Migration
             $table->id();
             $table->foreignId("element_id")->constrained("elements")->onDelete("cascade");
             $table->longText("title")->nullbale();
-            $table->longText("text");
             $table->integer("display_order");
             $table->timestamps();
         });

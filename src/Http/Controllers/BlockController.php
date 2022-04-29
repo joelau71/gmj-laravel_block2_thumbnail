@@ -5,8 +5,11 @@ namespace GMJ\LaravelBlock2Thumbnail\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Alert;
 use App\Models\Element;
+use App\Models\Page;
 use GMJ\LaravelBlock2Thumbnail\Models\Block;
 use GMJ\LaravelBlock2Thumbnail\Models\Config;
+use Illuminate\Validation\Rule;
+use phpDocumentor\Reflection\Types\Boolean;
 
 class BlockController extends Controller
 {
@@ -27,43 +30,44 @@ class BlockController extends Controller
     {
         $element = Element::findOrFail($element_id);
         $config = Config::where("element_id", $element_id)->first();
-        return view('LaravelBlock2Thumbnail::create', compact("element_id", "element", "config"));
+        $pages = Page::all(["id", "title", "slug"]);
+        return view('LaravelBlock2Thumbnail::create', compact("element_id", "element", "config", "pages"));
     }
 
     public function store($element_id)
     {
+
         $element = Element::findOrFail($element_id);
 
-        $rules["uic_base64_image"] = "required";
-
-        foreach (config("translatable.locales") as $locale) {
-            $text[$locale] = request()["text_{$locale}"];
-            $title[$locale] = request()["title_{$locale}"];
-            $link_title[$locale] = request()["link_title_{$locale}"];
-            $rules["text_{$locale}"] = "required";
-        }
-
-        request()->validate($rules);
+        request()->validate(
+            [
+                "image" => ["required", "image", "mimes:jpeg,jpg,png,webp"],
+                "title.*" => ["max:255"]
+            ]
+        );
 
         $display_order = Block::where("element_id", $element_id)->max("display_order");
         $display_order++;
 
         $collection = Block::create([
             "element_id" => $element_id,
-            "title" => $title,
-            "text" => $text,
+            "title" => request()->title,
             "display_order" => $display_order
         ]);
 
-        $collection->addMediaFromBase64(request()->uic_base64_image, ["image/jpeg", "image/png"])->toMediaCollection('laravel_block2_thumbnail');
+        $collection->addMediaFromRequest('image')->toMediaCollection('laravel_block2_thumbnail_original');
 
-        if (request()->page_id) {
-            $collection->link()->create([
-                "element_id" => $element->id,
-                "page_id" => request()->page_id,
-                "title" => $link_title,
-            ]);
-        }
+        //$collection->addMediaFromBase64(request()->uic_base64_image, ["image/jpeg", "image/png", "image/webp"])->withResponsiveImages()->toMediaCollection('laravel_block2_thumbnail');
+
+        $collection->addMediaFromBase64(request()->uic_base64_image, ["image/jpeg", "image/png", "image/webp"])->toMediaCollection('laravel_block2_thumbnail');
+
+        $collection->elementLinkPage()->create([
+            "element_id" => $element->id,
+            "page_id" => request()->page_id,
+            "is_custom_link" => boolval(request()->is_custom_link),
+            "is_external" => boolval(request()->is_external),
+            "custom_link" => request()->custom_link
+        ]);
 
         $element->active();
 
@@ -76,41 +80,48 @@ class BlockController extends Controller
         $element = Element::findOrFail($element_id);
         $collection = Block::findOrFail($id);
         $config = Config::where("element_id", $element_id)->first();
-        return view('LaravelBlock2Thumbnail::edit', compact("element_id", "element", "collection", "config"));
+        $pages = Page::all(["id", "title", "slug"]);
+
+        return view('LaravelBlock2Thumbnail::edit', compact("element_id", "element", "collection", "config", "pages"));
     }
 
     public function update($element_id, $id)
     {
         $element = Element::findOrFail($element_id);
 
-        foreach (config("translatable.locales") as $locale) {
-            $text[$locale] = request()["text_{$locale}"];
-            $title[$locale] = request()["title_{$locale}"];
-            $link_title[$locale] = request()["link_title_{$locale}"];
-            $rules["text_{$locale}"] = "required";
-        }
+        request()->validate(
+            [
+                "image" => ["image", "mimes:jpeg,jpg,png,webp"],
+                "title.*" => ["max:255"]
+            ]
+        );
 
-        request()->validate($rules);
         $collection = Block::findOrFail($id);
         $collection->update([
-            "title" => $title,
-            "text" => $text,
+            "title" => request()->title,
         ]);
 
+        if (request()->image) {
+            $collection->addMediaFromRequest('image')->toMediaCollection('laravel_block2_thumbnail_original');
+        }
+
         if (request()->uic_base64_image) {
-            $collection->addMediaFromBase64(request()->uic_base64_image, ["image/jpeg", "image/png"])->toMediaCollection('laravel_block2_thumbnail');
+            //$collection->addMediaFromBase64(request()->uic_base64_image, ["image/jpeg", "image/png", "image/webp"])->withResponsiveImages()->toMediaCollection('laravel_block2_thumbnail');
+            $collection->addMediaFromBase64(request()->uic_base64_image, ["image/jpeg", "image/png", "image/webp"])->toMediaCollection('laravel_block2_thumbnail');
         }
 
-        $collection->link()->delete();
+        $collection->elementLinkPage()->delete();
 
-        if (request()->page_id) {
-            $collection->link()->create([
-                "element_id" => $element->id,
-                "page_id" => request()->page_id,
-                "title" => $link_title,
-            ]);
-        }
+        $collection->elementLinkPage()->create([
+            "element_id" => $element->id,
+            "page_id" => request()->page_id,
+            "is_custom_link" => boolval(request()->is_custom_link),
+            "is_external" => boolval(request()->is_external),
+            "custom_link" => request()->custom_link
+        ]);
 
+
+        //$collection->elementLinkPage()->sync(request()->page_id);
 
         Alert::success("Edit Element {$element->title} Thumbnail success");
         return redirect()->route('LaravelBlock2Thumbnail.index', $element_id);
@@ -140,7 +151,7 @@ class BlockController extends Controller
     {
         $element = Element::findOrFail($element_id);
         $collection = Block::findOrFail($id);
-        $collection->link()->delete();
+        $collection->deleteElementLinkPage();
         $collection->delete();
 
         if ($collection->count() < 1) {

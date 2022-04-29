@@ -1,10 +1,5 @@
 <?php
 
 return [
-    "layouts" => [
-        "3-column",
-        "4-column",
-        "5-column",
-        "5-column-slider",
-    ],
+    "layouts" => [1, 2, 3, "3-product", "latest-news"],
 ];

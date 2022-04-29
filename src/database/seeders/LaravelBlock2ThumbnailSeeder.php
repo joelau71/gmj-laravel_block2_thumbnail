@@ -21,6 +21,7 @@ class LaravelBlock2ThumbnailSeeder extends Seeder
      */
     public function run()
     {
+        $imageSubject = "person";
         $template = ElementTemplate::where("component", "LaravelBlock2Thumbnail")->first();
 
         if ($template) {
@@ -43,39 +44,86 @@ class LaravelBlock2ThumbnailSeeder extends Seeder
 
         $config = Config::create([
             "element_id" => $element->id,
-            "img_width" => "600",
+            "img_width" => "800",
             "img_height" => "600",
-            "layout" => "4-column",
+            "layout" => 3,
         ]);
 
         for ($i = 1; $i < 9; $i++) {
             $title = [];
-            $text = [];
 
             foreach (config('translatable.locales') as $locale) {
                 $title[$locale] = $faker->name;
-                $text[$locale] = $faker->text(60);
-                $link_title[$locale] = $faker->name;
             }
 
             $collection = Block::create([
                 "element_id" => $element->id,
                 "title" => $title,
-                "text" => $text,
                 "display_order" => $i
             ]);
 
-            $img = Image::make(storage_path("demo/people/{$i}.jpg"))->fit($config->img_width, $config->img_height);
+            $url = "https://source.unsplash.com/{$config->img_width}x{$config->img_height}/?{$imageSubject}";
+            $path = "demo/temp.jpg";
 
-            $img->save(storage_path("demo/temp.jpg"));
-            $collection->addMedia(storage_path('demo/temp.jpg'))
+            $collection->grabImageFromUnsplash($url, $path);
+
+            $collection->addMedia(storage_path($path))
+                ->preservingOriginal()
+                ->toMediaCollection("laravel_block2_thumbnail_original");
+
+            $collection->addMedia(storage_path($path))->withResponsiveImages()
                 ->toMediaCollection("laravel_block2_thumbnail");
+
             $page_id = Arr::random($pages);
 
-            $collection->link()->create([
+            $collection->elementLinkPage()->create([
                 "element_id" => $element->id,
                 "page_id" => $page_id,
-                "title" => $link_title,
+            ]);
+        }
+
+        $element = Element::create([
+            "template_id" => $template->id,
+            "title" => "laravel-block2-thumbnail-sample-3-product",
+            "is_active" => 1
+        ]);
+
+        $config = Config::create([
+            "element_id" => $element->id,
+            "img_width" => "316",
+            "img_height" => "226",
+            "layout" => "3-product",
+        ]);
+
+        for ($i = 1; $i < 9; $i++) {
+            $title = [];
+
+            foreach (config('translatable.locales') as $locale) {
+                $title[$locale] = $faker->name;
+            }
+
+            $collection = Block::create([
+                "element_id" => $element->id,
+                "title" => $title,
+                "display_order" => $i
+            ]);
+
+            $url = "https://source.unsplash.com/{$config->img_width}x{$config->img_height}/?{$imageSubject}";
+            $path = "demo/temp.jpg";
+
+            $collection->grabImageFromUnsplash($url, $path);
+
+            $collection->addMedia(storage_path($path))
+                ->preservingOriginal()
+                ->toMediaCollection("laravel_block2_thumbnail_original");
+
+            $collection->addMedia(storage_path($path))->toMediaCollection("laravel_block2_thumbnail");
+
+            $page_id = Arr::random($pages);
+
+            $collection->elementLinkPage()->create([
+                "element_id" => $element->id,
+                "page_id" => $page_id,
             ]);
         }
     }

@@ -2,27 +2,36 @@
 
 namespace GMJ\LaravelBlock2Thumbnail\View\Components;
 
+use App\Traits\LocaleTrait;
 use GMJ\LaravelBlock2Thumbnail\Models\Block;
 use GMJ\LaravelBlock2Thumbnail\Models\Config;
 use Illuminate\View\Component;
 
 class Frontend extends Component
 {
+    use LocaleTrait;
+
     public $element_id;
     public $page_element_id;
-    public $collections;
+    public $collection;
+    public $layout;
+    public $locale;
+    public $config;
 
     public function __construct($pageElementId, $elementId)
     {
         $this->page_element_id = $pageElementId;
         $this->element_id = $elementId;
-        $this->collections = Block::where("element_id", $elementId)->orderBy("display_order")->get();
+        $this->collection = Block::with("media")->with("elementLinkPage", function ($query) {
+            $query->with("page");
+        })->where("element_id", $elementId)->orderBy("display_order")->get();
+        $this->config = Config::where("element_id", $this->element_id)->first();
+        $this->locale = $this->getLocale();
+        $this->layout = $this->config->layout;
     }
 
     public function render()
     {
-        $config = Config::where("element_id", $this->element_id)->first();
-        $layout = $config->layout;
-        return view("LaravelBlock2Thumbnail::components.{$layout}.frontend");
+        return view("LaravelBlock2Thumbnail::components.frontend-{$this->layout}");
     }
 }

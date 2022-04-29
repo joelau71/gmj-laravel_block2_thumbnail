@@ -3,7 +3,7 @@
         $breadcrumbs = [
             ['name' => 'Element', 'link' => route("admin.element.index")],
             ['name' => $element->title],
-            ['name' => "Thumbnail Content"],
+            ['name' => "Thumbnail"],
         ];
     @endphp
     <x-admin.atoms.breadcrumb :breadcrumbs="$breadcrumbs" />
@@ -24,10 +24,10 @@
         </x-admin.atoms.row>
 
         
-        <x-admin.atoms.index-header>
+        <x-admin.atoms.header-banner>
             <div class="flex-1">Image</div>
             <div class="flex-1"></div>
-        </x-admin.atoms.index-header>
+        </x-admin.atoms.header-banner>
 
         @forelse ($collections as $item)
             <div class="flex items-center space-x-2 p-3">
@@ -45,7 +45,7 @@
                         class="inline-block">
                         @csrf
                         @method("DELETE")
-                        <x-admin.atoms.button class="destroy">
+                        <x-admin.atoms.button class="delete">
                             Delete
                         </x-admin.atoms.button>
                     </form>
@@ -55,4 +55,23 @@
             <div class="text-center p-4 font-bold text-3xl">No Data</div>
         @endforelse
     </div>
+    @push('js')
+        <script src="{{ asset("js/jquery-3.6.0.min.js") }}"></script>
+        <script src="{{ asset("js/sweetalert-2.1.2.min.js") }}"></script>
+        <script>
+             $(".delete").on("click", function(event){
+                const $this = $(this);
+                event.preventDefault();
+                Swal.fire({
+                    title: 'Are you sure to Delete?',
+                    showCancelButton: true,
+                    confirmButtonText: "Yes",
+                }).then(res => {
+                    if (res.isConfirmed) {
+                        $this.closest("form").submit();
+                    }
+                });
+            });
+        </script>
+    @endpush
 </x-admin.layout.app>

@@ -2,7 +2,10 @@
 
 namespace GMJ\LaravelBlock2Thumbnail\Models;
 
-use App\Models\Link;
+use App\Traits\DeleteAllChildrenTrait;
+use App\Traits\DeleteElementLinkPageTrait;
+use App\Traits\ElementLinkPageTrait;
+use App\Traits\GrabImageFromUnsplashTrait;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Translatable\HasTranslations;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,19 +19,21 @@ class Block extends Model implements HasMedia
     use HasFactory;
     use HasTranslations;
     use InteractsWithMedia;
+    use ElementLinkPageTrait;
+    use DeleteAllChildrenTrait;
+    use GrabImageFromUnsplashTrait;
+    use DeleteElementLinkPageTrait;
 
     protected $guarded = [];
-    public $translatable = ['title', 'text'];
+    public $translatable = ['title'];
     public $table = "laravel_block2_thumbnails";
 
     public function registerMediaCollections(Media $media = null): void
     {
         $this->addMediaCollection("laravel_block2_thumbnail")
             ->singleFile();
-    }
 
-    public function link()
-    {
-        return $this->morphOne(Link::class, 'linkable');
+        $this->addMediaCollection("laravel_block2_thumbnail_original")
+            ->singleFile();
     }
 }
